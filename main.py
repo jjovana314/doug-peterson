@@ -1,10 +1,16 @@
-import discord
-from discordLevelingSystem import DiscordLevelingSystem, LevelUpAnnouncement, RoleAward
-from mee6_py_api import API
 import os
 from dotenv import load_dotenv
-import asyncio
+import requests
+import discord
+from discord.ext import commands
+
 
 load_dotenv()
+bot = commands.Bot(command_prefix='!')
+
+@bot.command()
+async def get_rank(ctx):
+    await ctx.send("!rank")
+
 
 
