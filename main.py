@@ -10,7 +10,7 @@ assign_role = config('ASSIGN_ROLE_NAME')
 trust_role_name = config('TRUST_ROLE_NAME')
 inactive_threshold = config('INACTIVE_THRESHOLD')
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.typing = False
 intents.presences = False
 intents.members = True
