@@ -1,14 +1,14 @@
 import discord
 from discord.ext import commands
-from datetime import datetime, timedelta
+from datetime import datetime
 from decouple import config
 
 # configuration
 token = config('TOKEN')
-prefix = config('PREFIX')
-assign_role = config('ASSIGN_ROLE_NAME')
-trust_role_name = config('TRUST_ROLE_NAME')
-inactive_threshold = config('INACTIVE_THRESHOLD')
+prefix = '!'
+assign_role = 'lurker'
+trust_role_name = 'trust'
+inactive_threshold = 90
 
 intents = discord.Intents.all()
 intents.typing = False
@@ -20,11 +20,13 @@ bot = commands.Bot(command_prefix=prefix, intents=intents)
 
 @bot.event
 async def on_ready():
+    """ Connecting bot to discord server """
     print(f'{bot.user.name} has connected to Discord!')
 
 
 @bot.command()
 async def get_roles(ctx) -> list:
+    """ Getting user's roles """
     # add members
     server = ctx.guild
     member = ctx.author  # command author
@@ -40,6 +42,7 @@ async def get_roles(ctx) -> list:
 
 @bot.event
 async def on_message(message):
+    """ Method getting triggered when user sends a message """
     # track time of last message
     await bot.process_commands(message)
     user = message.author
@@ -65,7 +68,7 @@ async def on_message(message):
 
 @bot.command()
 async def invite(ctx):
-    # generate link for server
+    """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
 
