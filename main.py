@@ -8,7 +8,7 @@ token = config('TOKEN')
 prefix = '!'
 assign_role = 'lurker'
 trust_role_name = 'trust'
-inactive_threshold = 90
+inactive_threshold = 10
 
 intents = discord.Intents.all()
 intents.typing = False
@@ -48,22 +48,21 @@ async def on_message(message):
     user = message.author
     last_message_time = user.created_at
 
-    for msg in await user.history(limit=None).flatten():
+    messages = [msg async for msg in user.history(limit=None)]
+    for msg in messages:
         if msg.created_at > last_message_time:
             last_message_time = msg.created_at
-    time_difference = datetime.now() - last_message_time
+    time_difference = datetime.now() - last_message_time.replace(tzinfo=None)     # change this after testing
 
     lurker_role = discord.utils.get(message.guild.roles, name=assign_role)
     trust_role = discord.utils.get(message.guild.roles, name=trust_role_name)
-
-    # check user for lurker role
     if trust_role in user.roles:
         # user has trust role
         return
-    elif time_difference.days >= inactive_threshold:
+    elif time_difference.minute >= inactive_threshold:
         await user.add_roles(lurker_role)
-    else:
-        await user.remove_roles(lurker_role)
+    # else:
+    #     await user.remove_roles(lurker_role)
 
 
 @bot.command()
