@@ -1,14 +1,19 @@
 import discord
 from discord.ext import commands
-from datetime import datetime
 from decouple import config
+from datetime import timedelta, datetime
+import time
 
 # configuration
 token = config('TOKEN')
+channel_id = config('CHANNEL_ID')
 prefix = '!'
-assign_role = 'lurker'
+lurker_role = 'lurker'
 trust_role_name = 'trust'
 inactive_threshold = 10
+
+run_at = datetime.now() + timedelta(days=30)
+delay = (run_at - datetime.now()).total_seconds()
 
 intents = discord.Intents.all()
 intents.typing = False
@@ -18,10 +23,25 @@ intents.members = True
 bot = commands.Bot(command_prefix=prefix, intents=intents)
 
 
+@bot.command()
+async def members(ctx) -> None:
+    """ This is a test method for now, just to see how scheduling system in discord library works """
+    print('Members:')
+    for guild in bot.guilds:
+        for member in guild.members:
+            print(member)
+
+
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
     print(f'{bot.user.name} has connected to Discord!')
+    while True:
+        channel = bot.get_channel(int(channel_id))
+        if channel:
+            dummy_ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
+            await bot.get_command('members').invoke(dummy_ctx)
+        time.sleep(15)  # only for testing
 
 
 @bot.command()
@@ -43,26 +63,14 @@ async def get_roles(ctx) -> list:
 @bot.event
 async def on_message(message):
     """ Method getting triggered when user sends a message """
+    # check if user has lurker role and remove it
+
     # track time of last message
     await bot.process_commands(message)
     user = message.author
-    last_message_time = user.created_at
-
-    messages = [msg async for msg in user.history(limit=None)]
-    for msg in messages:
-        if msg.created_at > last_message_time:
-            last_message_time = msg.created_at
-    time_difference = datetime.now() - last_message_time.replace(tzinfo=None)     # change this after testing
-
-    lurker_role = discord.utils.get(message.guild.roles, name=assign_role)
-    trust_role = discord.utils.get(message.guild.roles, name=trust_role_name)
-    if trust_role in user.roles:
-        # user has trust role
-        return
-    elif time_difference.minute >= inactive_threshold:
-        await user.add_roles(lurker_role)
-    # else:
-    #     await user.remove_roles(lurker_role)
+    print(user)
+    if lurker_role in user.roles:
+        await user.remove_role(lurker_role)
 
 
 @bot.command()
@@ -70,6 +78,5 @@ async def invite(ctx):
     """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
-
 
 bot.run(token)
