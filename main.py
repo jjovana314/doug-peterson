@@ -7,9 +7,6 @@ import time
 # configuration
 token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
-prefix = '!'
-lurker_role = 'lurker'
-trust_role_name = 'trust'
 inactive_threshold = 10
 
 run_at = datetime.now() + timedelta(days=30)
@@ -20,16 +17,18 @@ intents.typing = False
 intents.presences = False
 intents.members = True
 
-bot = commands.Bot(command_prefix=prefix, intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
 @bot.command()
-async def members(ctx) -> None:
+async def add_lurker(ctx) -> None:
     """ This is a test method for now, just to see how scheduling system in discord library works """
-    print('Members:')
+    lurker_role = discord.utils.get(ctx.message.author, name='lurker')
+    trust_role = discord.utils.get(ctx.message.author, name='trust')
     for guild in bot.guilds:
         for member in guild.members:
-            print(member)
+            if trust_role not in member.roles:
+                await bot.add_roles(member, lurker_role)
 
 
 @bot.event
@@ -39,8 +38,8 @@ async def on_ready():
     while True:
         channel = bot.get_channel(int(channel_id))
         if channel:
-            dummy_ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
-            await bot.get_command('members').invoke(dummy_ctx)
+            ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
+            await bot.get_command('members').invoke(ctx)
         time.sleep(15)  # only for testing
 
 
