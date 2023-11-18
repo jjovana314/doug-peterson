@@ -28,7 +28,7 @@ async def add_lurker(ctx) -> None:
     for guild in bot.guilds:
         for member in guild.members:
             if trust_role not in member.roles:
-                await bot.add_roles(member, lurker_role)
+                await member.add_roles(lurker_role)
 
 
 @bot.event
@@ -67,7 +67,7 @@ async def on_message(message):
     # track time of last message
     await bot.process_commands(message)
     user = message.author
-    print(user)
+    lurker_role = discord.utils.get(user, name='lurker')
     if lurker_role in user.roles:
         await user.remove_role(lurker_role)
 
