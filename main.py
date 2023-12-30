@@ -29,12 +29,13 @@ async def add_lurker(ctx) -> None:
     lurker_role = discord.utils.get(ctx.guild.roles, id=lurker_role_id)
     members_with_trust_role = [member.name for member in ctx.guild.members if trust_role in member.roles]
     non_lurkers = [member.name for member in ctx.guild.members if lurker_role not in member.roles]
-    non_lurkers_without_trust = non_lurkers and not members_with_trust_role
+    inactive_users = [member for member in ctx.guild.members
+                      if lurker_role not in member.roles and trust_role not in member.roles]
     if len(members_with_trust_role) > 0:
         print(f"Ignoring users: {', '.join(members_with_trust_role)}")
 
-    if len(non_lurkers_without_trust):
-        for member in non_lurkers_without_trust:
+    if len(inactive_users) > 0:
+        for member in inactive_users:
             last_message = await get_last_message(member)
             if last_message is not None and (discord.utils.utcnow() - last_message.cread_at).days > 60:
                 await member.add_role(lurker_role)
@@ -42,8 +43,11 @@ async def add_lurker(ctx) -> None:
 
 async def get_last_message(member):
     try:
-        last_message = await member.history(limit=1).flattern()
-        return last_message[0]
+        for channel in member.guild.text_channels:
+            last_message = await channel.history(limit=1).flatten()
+            if last_message:
+                return last_message[0]
+        return None
     except IndexError:
         return None
 
