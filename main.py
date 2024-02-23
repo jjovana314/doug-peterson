@@ -8,7 +8,6 @@ import time
 token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
 lurker_role_id = int(config('LURKER_ROLE_ID'))
-trust_role_id = int(config('TRUST_ROLE_ID'))
 inactive_threshold = 10
 
 run_at = datetime.now() + timedelta(days=30)
@@ -25,14 +24,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.command()
 async def add_lurker(ctx) -> None:
     """ This is a test method for now, just to see how scheduling system in discord library works """
-    trust_role = discord.utils.get(ctx.guild.roles, id=trust_role_id)
     lurker_role = discord.utils.get(ctx.guild.roles, id=lurker_role_id)
-    members_with_trust_role = [member.name for member in ctx.guild.members if trust_role in member.roles]
     non_lurkers = [member.name for member in ctx.guild.members if lurker_role not in member.roles]
-    inactive_users = [member for member in ctx.guild.members
-                      if lurker_role not in member.roles and trust_role not in member.roles]
-    if len(members_with_trust_role) > 0:
-        print(f"Ignoring users: {', '.join(members_with_trust_role)}")
+    inactive_users = [member for member in ctx.guild.members if lurker_role not in member.roles]
 
     if len(inactive_users) > 0:
         for member in inactive_users:
