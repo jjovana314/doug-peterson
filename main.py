@@ -1,8 +1,10 @@
 from discord import Member, Message, Intents, utils
-from discord.ext import commands
 from decouple import config
 from datetime import timedelta, datetime
-import time
+from discord.ext import tasks, commands
+import asyncio
+import logging
+import sys
 
 # configuration
 token = config('TOKEN')
@@ -22,11 +24,18 @@ intents.moderation = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+logger = logging.getLogger('doug_peterson_log')
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
 
 @bot.command()
 async def add_lurker(ctx) -> None:
-    """ This is a test method for now, just to see how scheduling system in discord library works """
-    print("Started adding lurker role to users...")
+    """ Add lurker role to user """
+    logger.info("Started adding lurker role to users...")
     lurker_role = utils.get(ctx.guild.roles, id=lurker_role_id)
     bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
     non_lurkers = [member for member in ctx.guild.members if lurker_role not in member.roles]
@@ -39,9 +48,9 @@ async def add_lurker(ctx) -> None:
                 last_message = await get_last_message(member)
                 if last_message is not None and (utils.utcnow() - last_message.created_at).days > 60:
                     await member.add_roles(lurker_role)
-                    print(f"Lurker added for user {member.name} - id: {member.id}")
+                    logger.info(f"Lurker added for user {member.name} - id: {member.id}")
             else:
-                print(f"User {member.name} id: {member.id} already has lurker role or is bot, skipping...")
+                logger.info(f"User {member.name} id: {member.id} already has lurker role or is bot, skipping...")
 
 
 async def get_last_message(member: Member) -> Message or None:
@@ -51,16 +60,17 @@ async def get_last_message(member: Member) -> Message or None:
                 return message
 
 
+@tasks.loop(minutes=4)
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
-    print(f'{bot.user.name} has connected to Discord!')
+    logger.info(f'{bot.user.name} has connected to Discord!')
     while True:
         channel = bot.get_channel(int(channel_id))
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        time.sleep(15)  # only for testing
+        await asyncio.sleep(delay=60)
 
 
 @bot.command()
