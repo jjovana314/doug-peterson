@@ -38,24 +38,24 @@ async def add_lurker(ctx) -> None:
     logger.info("Started adding lurker role to users...")
     lurker_role = utils.get(ctx.guild.roles, id=lurker_role_id)
     bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
-    non_lurkers = [member for member in ctx.guild.members if lurker_role not in member.roles]
     bots = [member for member in ctx.guild.members if bots_role in member.roles]
-    inactive_users: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
+    non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
 
-    if len(inactive_users) > 0:
-        for member in inactive_users:
-            if member in non_lurkers and member not in bots:
+    if len(non_lurkers) > 0:
+        for member in non_lurkers:
+            if member not in bots:
                 last_message = await get_last_message(member)
                 if last_message is not None and (utils.utcnow() - last_message.created_at).days > 60:
                     await member.add_roles(lurker_role)
-                    logger.info(f"Lurker added for user {member.name} - id: {member.id}")
+                    logger.info(f"Lurker role added to member {member.name} - id: {member.id}")
             else:
-                logger.info(f"User {member.name} id: {member.id} already has lurker role or is bot, skipping...")
+                logger.info(f"Member {member.name} id: {member.id} is bot, skipping...")
 
 
 async def get_last_message(member: Member) -> Message or None:
     for channel in member.guild.text_channels:
-        async for message in channel.history(limit=100):  # Adjust the limit as needed
+        logger.info(f"Checking channel {channel.name} id: {channel.id}")
+        async for message in channel.history(limit=100000):  # Adjust the limit as needed
             if message.author.id == member.id:
                 return message
 
