@@ -58,12 +58,12 @@ async def add_lurker(ctx) -> None:
 async def get_last_message(member: Member) -> Message or None:
     for channel in member.guild.text_channels:
         logger.info(f"Checking channel {channel.name} id: {channel.id}")
-        async for message in channel.history(limit=100000):  # Adjust the limit as needed
+        async for message in channel.history(limit=100_000):  # Adjust the limit as needed
             if message.author.id == member.id:
                 return message
 
 
-@tasks.loop(minutes=4)
+@tasks.loop(hours=24*5)     # every 5 days
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
@@ -93,9 +93,10 @@ async def get_roles(ctx) -> list:
 
 @bot.event
 async def on_message(message):
-    """ Method getting triggered when user sends a message """
+    """ Method called when user sends a message """
     # check if user has lurker role and remove it
 
+    # todo: test this method
     # track time of last message
     await bot.process_commands(message)
     user = message.author
