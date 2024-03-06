@@ -114,11 +114,7 @@ async def invite(ctx):
     await ctx.send(link)
 # Define an HTTP handler function
 
-
-@app.route('/')
-def index():
-    bot.start(config('TOKEN'))
-
-
 if __name__ == '__main__':
-    app.run(port=int(config('PORT')) if config('PORT') is not None else 5000)
+    bot.start(config('TOKEN'))
+    app.run()
+
