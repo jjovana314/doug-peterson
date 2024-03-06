@@ -65,7 +65,7 @@ async def get_last_message(member: Member) -> Message or None:
                 return message
 
 
-@tasks.loop(hours=24*5)     # every 5 days
+@tasks.loop(hours=24)
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
