@@ -2,7 +2,7 @@ from discord import Member, Message, Intents, utils
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
-from flask import Flask, request
+from flask import Flask 
 import asyncio
 import logging
 import sys
@@ -75,7 +75,7 @@ async def on_ready():
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        await asyncio.sleep(delay=60)
+        # await asyncio.sleep(delay=60)
 
 
 @bot.command()
