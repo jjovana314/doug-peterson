@@ -2,7 +2,7 @@ from discord import Member, Message, Intents, utils
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
-from aiohttp import web
+from flask import Flask, request
 import asyncio
 import logging
 import sys
@@ -13,6 +13,7 @@ channel_id = config('CHANNEL_ID')
 lurker_role_id = int(config('LURKER_ROLE_ID'))
 bots_role_id = int(config('BOTS_ROLE_ID'))
 inactive_threshold = 10
+app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
 delay = (run_at - datetime.now()).total_seconds()
@@ -114,26 +115,10 @@ async def invite(ctx):
 # Define an HTTP handler function
 
 
-async def handle(request):
-    return web.Response(text="Hello, World!", content_type='text/html')
+@app.route('/')
+def index():
+    bot.start(config('TOKEN'))
 
 
-async def run_discord_bot():
-    await bot.start(config('TOKEN'))
-
-
-async def start_http_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, 'localhost', config('PORT') if config('PORT') is not None else '5000')
-    await site.start()
-
-
-async def main():
-    await asyncio.gather(run_discord_bot(), start_http_server())
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+if __name__ == '__main__':
+    app.run(port=int(config('PORT')) if config('PORT') is not None else 5000)
