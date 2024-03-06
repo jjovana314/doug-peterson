@@ -2,6 +2,7 @@ from discord import Member, Message, Intents, utils
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
+from aiohttp import web
 import asyncio
 import logging
 import sys
@@ -110,6 +111,29 @@ async def invite(ctx):
     """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
+# Define an HTTP handler function
 
 
-bot.run(token)
+async def handle(request):
+    return web.Response(text="Hello, World!", content_type='text/html')
+
+
+async def run_discord_bot():
+    await bot.start(config('TOKEN'))
+
+
+async def start_http_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', config('PORT') if config('PORT') is not None else '5000')
+    await site.start()
+
+
+async def main():
+    await asyncio.gather(run_discord_bot(), start_http_server())
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
