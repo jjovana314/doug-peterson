@@ -110,7 +110,7 @@ async def invite(ctx):
     """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
-# Define an HTTP handler function
 
-bot.start(config('TOKEN'))
+
+bot.run(token)
 
