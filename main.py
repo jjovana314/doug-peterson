@@ -65,7 +65,7 @@ async def get_last_message(member: Member) -> Message or None:
                 return message
 
 
-@tasks.loop(hours=24)
+@tasks.loop(hours=24*5) # ! doesn't work
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
@@ -75,7 +75,7 @@ async def on_ready():
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        # await asyncio.sleep(delay=60)
+        await asyncio.sleep(delay=60*24*5)
 
 
 @bot.command()
