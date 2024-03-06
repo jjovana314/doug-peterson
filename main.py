@@ -2,7 +2,6 @@ from discord import Member, Message, Intents, utils
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
-from flask import Flask, request
 import asyncio
 import logging
 import sys
@@ -13,7 +12,6 @@ channel_id = config('CHANNEL_ID')
 lurker_role_id = int(config('LURKER_ROLE_ID'))
 bots_role_id = int(config('BOTS_ROLE_ID'))
 inactive_threshold = 10
-app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
 delay = (run_at - datetime.now()).total_seconds()
@@ -114,7 +112,5 @@ async def invite(ctx):
     await ctx.send(link)
 # Define an HTTP handler function
 
-if __name__ == '__main__':
-    bot.start(config('TOKEN'))
-    app.run()
+bot.start(config('TOKEN'))
 
