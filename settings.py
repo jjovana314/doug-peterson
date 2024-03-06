@@ -1,11 +1,8 @@
-import os
+from decouple import config
 
 ALLOWED_HOSTS = ['*']
 
-if 'PORT' in os.environ:
-    port = int(os.environ.get('PORT'))
-else:
-    port = 8000
+port = int(config('PORT')) if config('PORT') is not None else 5000
 
 DEBUG = True
 
