@@ -122,5 +122,5 @@ async def start():
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.create_task(bot.run(token))
-    app.run(port=config('PORT') if config('PORT') is not None else '5000')  # This will start the Flask web server
+    app.run(host='0.0.0.0', port=int(config('PORT')))
 
