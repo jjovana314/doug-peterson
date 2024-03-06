@@ -117,8 +117,10 @@ async def invite(ctx):
 @app.route('/')
 async def start():
     print('Bot starting...')
-    bot.run(token)
+
 
 if __name__ == '__main__':
-    app.run()
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run(token))
+    app.run()  # This will start the Flask web server
 
