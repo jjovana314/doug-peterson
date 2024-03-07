@@ -75,7 +75,7 @@ async def on_ready():
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        await asyncio.sleep(delay=60*24*5)
+        await asyncio.sleep(delay=60*3)
 
 
 @bot.command()
