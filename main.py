@@ -36,6 +36,8 @@ file_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 logger.addHandler(file_handler)
 
+# todo: add prevent_from_lurker command
+# todo: list all lurkers (maybe? this will be very large list :))
 
 @bot.command()
 async def add_lurker(ctx) -> None:
@@ -91,20 +93,6 @@ async def get_roles(ctx) -> list:
     role_names = [role.name for role in roles]
     await ctx.send(f'{member.name} has roles: {", ".join(role_names)}')
     return role_names
-
-
-@bot.event
-async def on_message(message):
-    """ Method called when user sends a message """
-    # check if user has lurker role and remove it
-
-    # todo: test this method
-    # track time of last message
-    await bot.process_commands(message)
-    user = message.author
-    lurker_role = utils.get(user, name='lurker')
-    if lurker_role in user.roles:
-        await user.remove_role(lurker_role)
 
 
 @bot.command()
