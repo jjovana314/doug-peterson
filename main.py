@@ -1,4 +1,4 @@
-from discord import Member, Message, Intents, utils
+from discord import Member, Message, Intents, utils, Client
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
@@ -21,6 +21,7 @@ intents.typing = False
 intents.presences = False
 intents.members = True
 intents.moderation = True
+client = Client(intents=intents)
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -49,11 +50,12 @@ async def add_lurker(ctx) -> None:
 
 
 async def get_last_message(member: Member) -> Message or None:
-    for channel in member.guild.text_channels:
-        print(f"Checking channel {channel.name} id: {channel.id}")
-        async for message in channel.history(limit=100_000):  # Adjust the limit as needed
-            if message.author.id == member.id:
-                return message
+    for guild in client.guilds:
+        for channel in guild.text_channels:
+            print(f"Checking channel {channel.name} id: {channel.id}")
+            async for message in channel.history(limit=100_000):  # Adjust the limit as needed
+                if message.author.id == member.id:
+                    return message
 
 
 @tasks.loop(hours=24*5) # ! doesn't work
