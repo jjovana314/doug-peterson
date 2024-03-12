@@ -89,3 +89,14 @@ async def invite(ctx):
     """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
+
+
+@app.route('/')
+async def start():
+    print('Bot starting...')
+
+
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.run(token))
+    app.run(host='0.0.0.0', port=int(config('PORT')))
