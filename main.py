@@ -4,8 +4,6 @@ from datetime import timedelta, datetime
 from discord.ext import tasks, commands
 from flask import Flask 
 import asyncio
-import logging
-import sys
 
 # configuration
 token = config('TOKEN')
@@ -26,23 +24,14 @@ intents.moderation = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-logger = logging.getLogger('doug_peterson_log')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-stream_handler = logging.StreamHandler(sys.stdout)
-stream_handler.setFormatter(formatter)
-file_handler = logging.FileHandler('doug_peterson.log')
-file_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
-
 # todo: add prevent_from_lurker command
 # todo: list all lurkers (maybe? this will be very large list :))
+
 
 @bot.command()
 async def add_lurker(ctx) -> None:
     """ Add lurker role to user """
-    logger.info("Started adding lurker role to users...")
+    print("Started adding lurker role to users...")
     lurker_role = utils.get(ctx.guild.roles, id=lurker_role_id)
     bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
     bots = [member for member in ctx.guild.members if bots_role in member.roles]
@@ -54,14 +43,14 @@ async def add_lurker(ctx) -> None:
                 last_message = await get_last_message(member)
                 if last_message is not None and (utils.utcnow() - last_message.created_at).days > 60:
                     await member.add_roles(lurker_role)
-                    logger.info(f"Lurker role added to member {member.name} - id: {member.id}")
+                    print(f"Lurker role added to member {member.name} - id: {member.id}")
             else:
-                logger.info(f"Member {member.name} id: {member.id} is bot, skipping...")
+                print(f"Member {member.name} id: {member.id} is bot, skipping...")
 
 
 async def get_last_message(member: Member) -> Message or None:
     for channel in member.guild.text_channels:
-        logger.info(f"Checking channel {channel.name} id: {channel.id}")
+        print(f"Checking channel {channel.name} id: {channel.id}")
         async for message in channel.history(limit=100_000):  # Adjust the limit as needed
             if message.author.id == member.id:
                 return message
@@ -71,7 +60,7 @@ async def get_last_message(member: Member) -> Message or None:
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
-    logger.info(f'{bot.user.name} has connected to Discord!')
+    print(f'{bot.user.name} has connected to Discord!')
     while True:
         channel = bot.get_channel(int(channel_id))
         if channel:
@@ -100,15 +89,3 @@ async def invite(ctx):
     """ Generate invite link """
     link = await ctx.channel.create_invite()
     await ctx.send(link)
-
-
-@app.route('/')
-async def start():
-    print('Bot starting...')
-
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.create_task(bot.run(token))
-    app.run(host='0.0.0.0', port=int(config('PORT')))
-
