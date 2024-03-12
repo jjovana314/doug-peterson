@@ -1,4 +1,4 @@
-from discord import Member, Message, Intents, utils, Client
+from discord import Member, Message, Intents, utils, TextChannel
 from decouple import config
 from datetime import timedelta, datetime
 from discord.ext import tasks, commands
@@ -40,7 +40,7 @@ async def add_lurker(ctx) -> None:
     if len(non_lurkers) > 0:
         for member in non_lurkers:
             if member not in bots:
-                last_message = await get_last_message(member)
+                last_message = await get_last_message(ctx, member)
                 if last_message is not None and (utils.utcnow() - last_message.created_at).days > 60:
                     await member.add_roles(lurker_role)
                     print(f"Lurker role added to member {member.name} - id: {member.id}")
@@ -48,14 +48,16 @@ async def add_lurker(ctx) -> None:
                 print(f"Member {member.name} id: {member.id} is bot, skipping...")
 
 
-async def get_last_message(member: Member) -> Message or None:
-    client = Client(intents=intents)
-    for guild in client.guilds:
-        for channel in guild.text_channels:
-            print(f"Checking channel {channel.name} id: {channel.id}")
-            async for message in channel.history(limit=100_000):  # Adjust the limit as needed
-                if message.author.id == member.id:
-                    return message
+async def get_last_message(ctx, member: Member) -> Message or None:
+    result = None
+    for server_channels in ctx.guild.channels:
+        for channel in server_channels.channels:
+            if isinstance(channel, TextChannel):
+                print(f'Checking channel {channel.name} id: {channel.id}')
+                async for message in channel.history(limit=100_000):  # Adjust the limit as needed
+                    if message.author.id == member.id:
+                        result = message
+    return result
 
 
 @tasks.loop(hours=24*5) # ! doesn't work
