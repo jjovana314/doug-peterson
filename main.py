@@ -21,7 +21,6 @@ intents.typing = False
 intents.presences = False
 intents.members = True
 intents.moderation = True
-client = Client(intents=intents)
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -50,6 +49,7 @@ async def add_lurker(ctx) -> None:
 
 
 async def get_last_message(member: Member) -> Message or None:
+    client = Client(intents=intents)
     for guild in client.guilds:
         for channel in guild.text_channels:
             print(f"Checking channel {channel.name} id: {channel.id}")
