@@ -39,11 +39,11 @@ async def add_lurker(ctx) -> None:
     escape_lurker_role = utils.get(ctx.guild.roles, id=escape_lurker_role_id)
     bots = [member for member in ctx.guild.members if bots_role in member.roles]
     non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
-    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role not in member.roles]
+    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
 
     if len(non_lurkers) > 0:
         for member in non_lurkers:
-            if member not in bots or member not in escape_lurker:
+            if member not in bots and member not in escape_lurker:
                 if await is_lurker_material(ctx, member):
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
