@@ -43,7 +43,7 @@ async def add_lurker(ctx) -> None:
 
     if len(non_lurkers) > 0:
         for member in non_lurkers:
-            if member not in bots and member not in escape_lurker:
+            if member not in bots or member not in escape_lurker:
                 if await is_lurker_material(ctx, member):
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
