@@ -10,6 +10,7 @@ token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
 lurker_role_id = int(config('LURKER_ROLE_ID'))
 bots_role_id = int(config('BOTS_ROLE_ID'))
+escape_lurker_role_id = int(config('ESCAPE_LURKER_ROLE_ID'))
 inactive_threshold = 10
 app = Flask(__name__)
 
@@ -35,17 +36,19 @@ async def add_lurker(ctx) -> None:
     print("Started adding lurker role to users...")
     lurker_role = utils.get(ctx.guild.roles, id=lurker_role_id)
     bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
+    escape_lurker_role = utils.get(ctx.guild.roles, id=escape_lurker_role_id)
     bots = [member for member in ctx.guild.members if bots_role in member.roles]
     non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
+    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role not in member.roles]
 
     if len(non_lurkers) > 0:
         for member in non_lurkers:
-            if member not in bots:
+            if member not in bots and member not in escape_lurker:
                 if await is_lurker_material(ctx, member):
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
             else:
-                print(f"Member {member.name} id: {member.id} is bot, skipping...")
+                print(f"Member {member.name} id: {member.id} is bot or has lurker escape role, skipping...")
 
 
 async def is_lurker_material(ctx, member: Member) -> bool:
