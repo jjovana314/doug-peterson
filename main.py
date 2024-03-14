@@ -75,6 +75,7 @@ async def on_ready():
         await asyncio.sleep(delay=60 * 60 * 24 * 2)  # every 2 days
 
 
+# todo: move this to redis database
 @bot.event
 async def on_message(message):
     if message.author == bot.user:  # ignore messages from the bot itself
