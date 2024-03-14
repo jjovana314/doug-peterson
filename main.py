@@ -79,7 +79,7 @@ async def on_ready():
 async def get_response_from_redis(content):
     redis = aioredis.from_url(config('REDIS_URL'))
     try:
-        response = await redis.get(content)
+        response = await redis.scan(f'*{content}*')
         return response.decode() if response else None
     except (aioredis.RedisError, OSError) as e:
         print(f"An error occurred while getting data from redis database: {e}")
