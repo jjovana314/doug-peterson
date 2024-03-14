@@ -77,7 +77,7 @@ async def on_ready():
 
 
 async def get_response_from_redis(content):
-    redis = aioredis.from_url("redis://localhost")
+    redis = aioredis.from_url(config('REDIS_URL'))
     try:
         response = await redis.get(content)
         return response.decode() if response else None
