@@ -4,6 +4,7 @@ from datetime import timedelta, datetime
 from discord.ext import tasks, commands
 from flask import Flask
 import asyncio
+import aioredis
 
 # configuration
 token = config('TOKEN')
@@ -75,7 +76,17 @@ async def on_ready():
         await asyncio.sleep(delay=60 * 60 * 24 * 2)  # every 2 days
 
 
-# todo: move this to redis database
+async def get_response_from_redis(content):
+    redis = aioredis.from_url("redis://localhost")
+    try:
+        response = await redis.get(content)
+        return response.decode() if response else None
+    except (aioredis.RedisError, OSError) as e:
+        print(f"An error occurred while getting data from redis database: {e}")
+    finally:
+        await redis.close()
+
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user:  # ignore messages from the bot itself
@@ -83,58 +94,14 @@ async def on_message(message):
 
     if bot.user.mentioned_in(message):
         content = message.content.lower()
-        if "hi" in content:
-            await message.reply("This fucking guy...")
-        elif "why" in content or "zasto" in content:
-            await message.reply("Because I just never relent.")
-        elif "jovana" in content:
-            await message.reply("She is my familiar, but sometimes she's a little too familiar. You know what I mean? She's always there.")
-        elif "ko sam ja" in content:
-            await message.reply("I would not even remember your name if it wasn't written on the piece of paper I keep in my pocket at all times.")
-        elif "muskarac" in content or "muskarcima" in content or "man" in content or "man" in content:
-            await message.reply("You are all such strong, beautiful, vicious, vibrant women. How did you end up married to such boiled potatoes?")
-        elif "nun" in content:
-            await message.reply("No nuns. No nuns, none!")
-        elif "pesm" in content or "song" in content:
-            await message.reply("My favorite song is 'Girl in the Village with the One Small Foot' by Vasilios the Balladeer.")
-        elif "motiv" in content or "support" in content:
-            await message.reply("Be strong sweet little one. Some day they will all be dead; and you will do a shit on all of their graves.")
-        elif "jeff" in content:
-            await message.reply("Ah, my dear Jesk...")
-        elif "prica" in content or "story" in content or "los dan" in content:
-            await message.reply("She speaks the bullshit.")
-        elif "bavis" in content or "radis" in content:
-            await message.reply("I don’t live to drain, I drain to live.")
-        elif "deluje" in content or "looks" in content or "izgleda" in content:
-            await message.reply("It looks like Updog.")
-        elif "what's updog" in content:
-            await message.reply("Nothing much dog, how about you?")
-        elif "lurker" in content and "ne" in content:
-            await message.reply("Noooooo, I’m pillaging everyone, you included.")
-        elif "ko si ti" in content:
-            await message.reply("... And now, I'm a wizard.")
-        elif "gay" in content or "gej" in content:
-            await message.reply("Trust me: gay is in, gay is hot. I want some gay. Gay it's gonna be.")
-        elif "lud" in content or "crazy" in content or "glup" in content or "stupid" in content or "budala" in content:
-            await message.reply("...I beg your pardon?")
-        elif "lola" in content:
-            await message.reply(":shark: Fucking guy...")
-        elif "predstavi" in content:
-            await message.reply("Greetings, mortals. I will make this quick.\n\nI, Nandor the Relentless, conqueror of thousands, immortal warrior who has twice turned the Euphrates itself red with blood, hereby demand the complete and total supplication of this governing body to my command! \n\nSubmit and receive mercy. \nResist... and only death awaits")
-        elif "sredi" in content:
-            await message.reply("Be careful with the spider house Guillermo. You wouldn’t like it if a spider came along and dusted your house.")
-        elif "vikend" in content or "weekend" in content or "sta ima" in content:
-            await message.reply("We drank the blood of some people. But the people were on drugs. And now I’m a wizard.")
-        elif "ether" in content or "yelling" in content:
-            await message.reply("Arise! Arise! What is 'arise' again? Control, alt, seven?")
-        elif "cre" in content:
-            await message.reply("Creepy paper. Creepy paper. Creepy-oh! Multipack!")
-        elif "uci" in content or "stud" in content:
-            await message.reply("What is the most important NOLEJ?")
-        elif "this is" in content or "ovo je" in content:
-            await message.reply("But this is a turtle.")
+        response = await get_response_from_redis(content)
+
+        if response:
+            await message.reply(response)
         else:
             await message.reply("Yes, yes, very good, thank you.")
+        await bot.process_commands(message)
+
     await bot.process_commands(message)
 
 

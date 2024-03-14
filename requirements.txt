@@ -1,3 +1,4 @@
 discord
 python-decouple==3.8
 flask
+aioredis
