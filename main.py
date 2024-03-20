@@ -11,6 +11,7 @@ token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
 lurker_role_id = int(config('LURKER_ROLE_ID'))
 bots_role_id = int(config('BOTS_ROLE_ID'))
+redis = aioredis.from_url(config('REDIS_URL'))
 escape_lurker_role_id = int(config('ESCAPE_LURKER_ROLE_ID'))
 inactive_threshold = 10
 app = Flask(__name__)
@@ -76,12 +77,23 @@ async def on_ready():
         await asyncio.sleep(delay=60 * 60 * 24 * 2)  # every 2 days
 
 
-async def get_response_from_redis(content):
-    redis = aioredis.from_url(config('REDIS_URL'))
+async def get_response_from_redis(content: str):
+    cursor = b'0'
     try:
-        response = await redis.scan(f'*{content}*')
-        return response.decode() if response else None
-    except (aioredis.RedisError, OSError) as e:
+        parts = content.split(' ')
+        for part in parts:
+            while True:
+                cursor, keys = await redis.scan(cursor, match=part)
+
+                if keys:
+                    key = keys[0]
+                    key_data = (await redis.get(key))
+                    result = key_data.decode('latin-1')
+                    return result
+
+                if cursor == b'0':
+                    break
+    except aioredis.RedisError as e:
         print(f"An error occurred while getting data from redis database: {e}")
     finally:
         await redis.close()
