@@ -74,10 +74,11 @@ async def on_ready():
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        await asyncio.sleep(delay=60 * 60 * 24 * 2)  # every 2 days
+        await asyncio.sleep(delay=60 * 60 * 24 * 7)  # every 7 days
 
 
 async def get_response_from_redis(content: str):
+    """ Get message response from redis database """
     try:
         parts = content.split(' ')
         for part in parts:
@@ -93,6 +94,7 @@ async def get_response_from_redis(content: str):
 
 @bot.event
 async def on_message(message):
+    """ Triggered on message """
     if message.author == bot.user:  # ignore messages from the bot itself
         return
 
