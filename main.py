@@ -78,21 +78,13 @@ async def on_ready():
 
 
 async def get_response_from_redis(content: str):
-    cursor = b'0'
     try:
         parts = content.split(' ')
         for part in parts:
-            while True:
-                cursor, keys = await redis.scan(cursor, match=part)
+            key = await redis.get(part.lower())
+            if key:
+                return key.decode('utf-8')
 
-                if keys:
-                    key = keys[0]
-                    key_data = (await redis.get(key))
-                    result = key_data.decode('latin-1')
-                    return result
-
-                if cursor == b'0':
-                    break
     except aioredis.RedisError as e:
         print(f"An error occurred while getting data from redis database: {e}")
     finally:

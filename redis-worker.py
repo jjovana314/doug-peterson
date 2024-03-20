@@ -14,13 +14,15 @@ async def add_responses_to_redis():
 
         # Add data to Redis
         for key, value in data.items():
-            await redis.set(key.lower(), value)  # Convert key to lowercase for case-insensitive matching
+            key_utf = key.encode('utf-8')
+            value_utf = value.encode('utf-8')
+            await redis.set(key_utf.lower(), value_utf)  # Convert key to lowercase for case-insensitive matching
 
         print("Data added to Redis successfully")
     except (aioredis.RedisError, OSError, json.decoder.JSONDecodeError) as e:
         print(f"An error occurred while adding data to redis database: {e}")
     finally:
         await redis.close()
-#
+
 # if __name__ == "__main__":
 #     asyncio.run(add_responses_to_redis())
