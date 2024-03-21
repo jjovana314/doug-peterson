@@ -14,6 +14,8 @@ bots_role_id = int(config('BOTS_ROLE_ID'))
 redis = aioredis.from_url(config('REDIS_URL'))
 escape_lurker_role_id = int(config('ESCAPE_LURKER_ROLE_ID'))
 inactive_threshold = 10
+max_days_old_message = 60
+period_days = 7
 app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
@@ -57,7 +59,7 @@ async def is_lurker_material(ctx, member: Member) -> bool:
     for channel in ctx.guild.text_channels:
         print(f'Checking channel {channel.name} id: {channel.id}')
         async for message in channel.history(limit=2000):  # Adjust the limit as needed
-            if message.author.id == member.id and (utils.utcnow() - message.created_at).days <= 60:
+            if message.author.id == member.id and (utils.utcnow() - message.created_at).days <= max_days_old_message:
                 lurker_material = False
                 break
 
@@ -74,7 +76,7 @@ async def on_ready():
         if channel:
             ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
             await bot.get_command('add_lurker').invoke(ctx)
-        await asyncio.sleep(delay=60 * 60 * 24 * 7)  # every 7 days
+        await asyncio.sleep(delay=60 * 60 * 24 * period_days)
 
 
 async def get_response_from_redis(content: str):
