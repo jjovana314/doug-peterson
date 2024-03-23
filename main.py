@@ -41,18 +41,19 @@ async def add_lurker(ctx) -> None:
 
     non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
     escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
+    date_limit_for_lurkers = datetime.datetime.utcnow() - datetime.timedelta(days=max_days_old_message)
 
     if len(non_lurkers) > 0:
         for member in non_lurkers:
             if member not in bots and member not in escape_lurker:
-                if await is_lurker_material(ctx, member):
+                if await is_users_message_old_enough_for_lurker(ctx, member) and member.jointed_at > date_limit_for_lurkers:
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
             else:
                 print(f"Member {member.name} id: {member.id} is bot or has lurker escape role, skipping...")
 
 
-async def is_lurker_material(ctx, member: Member) -> bool:
+async def is_users_message_old_enough_for_lurker(ctx, member: Member) -> bool:
     """ Check if member is lurker material """
     lurker_material = True
 
