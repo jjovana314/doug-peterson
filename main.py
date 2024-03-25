@@ -1,9 +1,10 @@
 from discord import Member, Intents, utils
 from decouple import config
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, tzinfo
 from discord.ext import tasks, commands
 from flask import Flask
 import asyncio
+import pytz
 import aioredis
 
 # configuration
@@ -17,6 +18,8 @@ inactive_threshold = 10
 max_days_old_message = 60
 period_days = 7
 app = Flask(__name__)
+
+
 
 run_at = datetime.now() + timedelta(days=30)
 delay = (run_at - datetime.now()).total_seconds()
@@ -41,19 +44,21 @@ async def add_lurker(ctx) -> None:
 
     non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
     escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
+    utc_now_with_tz = pytz.utc.localize(datetime.utcnow())
+    date_limit_for_lurkers = utc_now_with_tz - timedelta(days=max_days_old_message)
 
     if len(non_lurkers) > 0:
         for member in non_lurkers:
-            if member not in bots and member not in escape_lurker:
-                if await is_lurker_material(ctx, member):
+            if member not in bots and member not in escape_lurker and member.joined_at > date_limit_for_lurkers:
+                if await check_channels_and_messages(ctx, member):
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
             else:
                 print(f"Member {member.name} id: {member.id} is bot or has lurker escape role, skipping...")
 
 
-async def is_lurker_material(ctx, member: Member) -> bool:
-    """ Check if member is lurker material """
+async def check_channels_and_messages(ctx, member: Member) -> bool:
+    """ Check users' messages in all channels and find if they have sent any messages in past period of time. """
     lurker_material = True
 
     for channel in ctx.guild.text_channels:
@@ -73,9 +78,11 @@ async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
     while True:
         channel = bot.get_channel(int(channel_id))
-        if channel:
-            ctx = await bot.get_context(await channel.fetch_message(channel.last_message_id))
-            await bot.get_command('add_lurker').invoke(ctx)
+        async for message in channel.history():
+            if channel and message and message.author.id != bot.user.id:
+                ctx = await bot.get_context(message)
+                await bot.get_command('add_lurker').invoke(ctx)
+                break
         await asyncio.sleep(delay=60 * 60 * 24 * period_days)
 
 
