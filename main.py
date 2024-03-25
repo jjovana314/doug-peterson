@@ -19,8 +19,6 @@ max_days_old_message = 60
 period_days = 7
 app = Flask(__name__)
 
-
-
 run_at = datetime.now() + timedelta(days=30)
 delay = (run_at - datetime.now()).total_seconds()
 
