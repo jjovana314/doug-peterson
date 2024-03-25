@@ -82,6 +82,7 @@ async def on_ready():
             if channel and message and message.author.id != bot.user.id:
                 ctx = await bot.get_context(message)
                 await bot.get_command('add_lurker').invoke(ctx)
+                break
         await asyncio.sleep(delay=60 * 60 * 24 * period_days)
 
 
