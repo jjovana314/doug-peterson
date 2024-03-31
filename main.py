@@ -69,19 +69,20 @@ async def check_channels_and_messages(ctx, member: Member) -> bool:
     return lurker_material
 
 
-# @tasks.loop(hours=24 * 5)  # ! doesn't work
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
     print(f'{bot.user.name} has connected to Discord!')
-    while True:
-        channel = bot.get_channel(int(channel_id))
-        async for message in channel.history():
-            if channel and message and message.author.id != bot.user.id:
-                ctx = await bot.get_context(message)
-                await bot.get_command('add_lurker').invoke(ctx)
-                break
-        await asyncio.sleep(delay=60 * 60 * 24 * period_days)
+
+
+@tasks.loop(seconds=5)  # ! doesn't work
+async def run_task():
+    channel = bot.get_channel(int(channel_id))
+    async for message in channel.history():
+        if channel and message and message.author.id != bot.user.id:
+            ctx = await bot.get_context(message)
+            await bot.get_command('add_lurker').invoke(ctx)
+            break
 
 
 async def get_response_from_redis(content: str):
@@ -123,7 +124,13 @@ async def start():
     print('Bot starting...')
 
 
-if __name__ == '__main__':
+async def main():
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.run(token))
-    app.run(host='0.0.0.0', port=int(config('PORT')))
+    # await asyncio.gather(bot.start(token), loop.create_task(app.run(host='0.0.0.0', port=int(config('PORT')))))
+    await bot.start(token)
+    await asyncio.gather(on_ready(), loop.create_task(app.run(host='0.0.0.0', port=int(config('PORT')))))
+    await run_task.start()
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
