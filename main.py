@@ -52,7 +52,7 @@ async def add_lurker(ctx) -> None:
                     await member.add_roles(lurker_role)
                     print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
             else:
-                print(f"Member {member.name} id: {member.id} is bot or has lurker escape role, skipping...")
+                print(f"Member {member.name} id: {member.id} is bot or is not lurker material, skipping...")
 
 
 async def check_channels_and_messages(ctx, member: Member) -> bool:
