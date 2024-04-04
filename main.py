@@ -16,7 +16,7 @@ redis = aioredis.from_url(config('REDIS_URL'))
 escape_lurker_role_id = int(config('ESCAPE_LURKER_ROLE_ID'))
 inactive_threshold = 10
 max_days_old_message = 60
-period_days = 7
+period_days = 30
 app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
