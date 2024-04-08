@@ -21,6 +21,8 @@ app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
 delay = (run_at - datetime.now()).total_seconds()
+utc_now_with_tz = pytz.utc.localize(datetime.utcnow())
+date_limit_for_lurkers = utc_now_with_tz - timedelta(days=max_days_old_message)
 
 intents = Intents.all()
 intents.typing = False
@@ -39,28 +41,21 @@ async def add_lurker(ctx) -> None:
     bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
     escape_lurker_role = utils.get(ctx.guild.roles, id=escape_lurker_role_id)
 
-    bots = [member.id for member in ctx.guild.members if bots_role in member.roles]
+    bots = [member for member in ctx.guild.members if bots_role in member.roles]
     non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
-    escape_lurker = [member.id for member in ctx.guild.members if escape_lurker_role in member.roles]
-
-    utc_now_with_tz = pytz.utc.localize(datetime.utcnow())
-    # date_limit_for_lurkers = utc_now_with_tz - timedelta(days=max_days_old_message)
+    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
 
     if len(non_lurkers) > 0:
-        async for message in ctx.channel.history(limit=1000):
-            if len(bots) > 0 and len(escape_lurker) > 0 and len(non_lurkers) > 0:
-                if checkUsersRole(bots, escape_lurker, non_lurkers, message):
-                    # todo: finish this
-                # for member in non_lurkers:
-                #     if message.author.id == member.id and (utils.utcnow() - message.created_at).days <= max_days_old_message:
-                #         # for the purpose of the testing this line is commented
-                #         # await member.add_roles(lurker_role)
-                #         print(f"{lurker_role.name} role added to member {member.name} - id: {member.id}")
-                #     else:
-                #         print(f"Member {member.name} id: {member.id} is not lurker material, skipping...")
+        for user in non_lurkers:
+            if user.id == '1073598367982161991':
+                print(f"Checking user: {user.id} name: {user.name}...")
+                if user not in bots and user not in escape_lurker and user.joined_at > date_limit_for_lurkers:
+                    async for message in ctx.channel.history(limit=1000):  # Fetch all messages
+                        if message.author.id == user.id and message and (utils.utcnow() - message.created_at).days >= max_days_old_message:
+                            print(f"Lurker role added to user {user.id} name: {user.name}")
+            else:
+                print(f"User {user.id} name: {user.name} is not lurker material.")
 
-
-checkUsersRole = lambda bots, escape_lurker, non_lurkers, message: not bots[message.author.id] and not escape_lurker[message.author.id] and non_lurkers[message.author]
 
 # @tasks.loop(hours=24 * 5)  # ! doesn't work
 @bot.event
