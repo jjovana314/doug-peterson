@@ -1,4 +1,4 @@
-from discord import Member, Intents, utils
+from discord import Member, Intents, utils, ChannelType
 from decouple import config
 from datetime import timedelta, datetime, tzinfo
 from discord.ext import tasks, commands
@@ -10,13 +10,10 @@ import aioredis
 # configuration
 token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
-lurker_role_id = int(config('LURKER_ROLE_ID'))
-bots_role_id = int(config('BOTS_ROLE_ID'))
 redis = aioredis.from_url(config('REDIS_URL'))
-escape_lurker_role_id = int(config('ESCAPE_LURKER_ROLE_ID'))
 inactive_threshold = 10
 max_days_old_message = 60
-period_days = 30
+period_days = 60
 app = Flask(__name__)
 
 run_at = datetime.now() + timedelta(days=30)
@@ -33,28 +30,36 @@ intents.moderation = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-@bot.command()
-async def add_lurker(ctx) -> None:
-    """ Add lurker role to user """
-    print("Started adding lurker role to users...")
-    lurker_role = utils.get(ctx.guild.roles, id=lurker_role_id)
-    bots_role = utils.get(ctx.guild.roles, id=bots_role_id)
-    escape_lurker_role = utils.get(ctx.guild.roles, id=escape_lurker_role_id)
-
-    bots = [member for member in ctx.guild.members if bots_role in member.roles]
-    non_lurkers: [Member] = [member for member in ctx.guild.members if lurker_role not in member.roles]
-    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
-
+async def check_messages_per_channel(channel_history, users_group) -> list:
+    bots, non_lurkers, escape_lurker, new_users_role, introduce_role = users_group
+    result = []
     if len(non_lurkers) > 0:
         for user in non_lurkers:
-            if user.id == '1073598367982161991':
-                print(f"Checking user: {user.id} name: {user.name}...")
-                if user not in bots and user not in escape_lurker and user.joined_at > date_limit_for_lurkers:
-                    async for message in ctx.channel.history(limit=1000):  # Fetch all messages
-                        if message.author.id == user.id and message and (utils.utcnow() - message.created_at).days >= max_days_old_message:
-                            print(f"Lurker role added to user {user.id} name: {user.name}")
-            else:
-                print(f"User {user.id} name: {user.name} is not lurker material.")
+            sent_any_messages = []
+            if user not in bots and user not in escape_lurker and user not in new_users_role and user not in introduce_role and user.joined_at < date_limit_for_lurkers:
+                async for message in channel_history:
+                    if message.author.id == user.id:
+                        sent_any_messages.append(True)
+                        if (utc_now_with_tz - message.created_at) >= timedelta(days=max_days_old_message):
+                            sent_any_messages.append(False)
+                result.append((user.id, all(sent_any_messages)))
+    return result
+
+
+async def generate_users_group(ctx):
+    lurker_role = utils.get(ctx.guild.roles, id=int(config('LURKER_ROLE_ID')))
+    bots_role = utils.get(ctx.guild.roles, id=int(config('BOTS_ROLE_ID')))
+    escape_lurker_role = utils.get(ctx.guild.roles, id=int(config('ESCAPE_LURKER_ROLE_ID')))
+    new_users_role = utils.get(ctx.guild.roles, id=int(config('NEW_USERS_ROLE_ID')))
+    introduce_role = utils.get(ctx.guild.roles, id=int(config('INTRODUCE_ROLE_ID')))
+
+    bots = [member for member in ctx.guild.members if bots_role in member.roles]
+    non_lurkers = [member for member in ctx.guild.members if lurker_role not in member.roles]
+    escape_lurker = [member for member in ctx.guild.members if escape_lurker_role in member.roles]
+    new_users_role = [member for member in ctx.guild.members if new_users_role in member.roles]
+    introduce_role = [member for member in ctx.guild.members if introduce_role in member.roles]
+
+    return bots, non_lurkers, escape_lurker, new_users_role, introduce_role
 
 
 # @tasks.loop(hours=24 * 5)  # ! doesn't work
@@ -62,14 +67,6 @@ async def add_lurker(ctx) -> None:
 async def on_ready():
     """ Connecting bot to discord server """
     print(f'{bot.user.name} has connected to Discord!')
-    while True:
-        channel = bot.get_channel(int(channel_id))
-        async for message in channel.history():
-            if channel and message and message.author.id != bot.user.id:
-                ctx = await bot.get_context(message)
-                await bot.get_command('add_lurker').invoke(ctx)
-                break
-        await asyncio.sleep(delay=60 * 60 * 24 * period_days)
 
 
 async def get_response_from_redis(content: str):
@@ -87,8 +84,36 @@ async def get_response_from_redis(content: str):
         await redis.close()
 
 
+async def check_lurker(message):
+    if message.content.startswith('!check_lurker'):
+        user_id = message.author.id  # ID of the user who sent the command
+        server_data = []  # List to hold server data
+
+        for channel in bot.get_all_channels():
+            print(f"Checking channel {channel.id} name: {channel.name}")
+            if channel.type == ChannelType.text:
+                ctx = await bot.get_context(message)  # Get context from the fetched message
+                users_group = await generate_users_group(ctx)
+                users_data = await check_messages_per_channel(channel.history(limit=50), users_group)
+                for user_data_per_channel in users_data:
+                    user_data = {'user_id': user_data_per_channel[0], 'sent_messages_in_channel': user_data_per_channel[1]}
+                    server_data.append(user_data)
+
+        for data in server_data:
+            user = bot.get_user(data['user_id'])
+            if not all(data['sent_messages_in_channel']):
+                # Add lurker role to user
+                # await user.add_roles(utils.get(ctx.guild.roles, id=lurker_role_id))
+                print(f"Added lurker role to user {user.name} id: {user.id}")
+            else:
+                print(f"User {user.id} name: {user.name} is not lurker material.")
+
+
 @bot.event
 async def on_message(message):
+    if message.content.startswith('!check_lurker'):
+        await message.reply('Checking...')
+        await check_lurker(message)
     """ Triggered on message """
     if message.author == bot.user:  # ignore messages from the bot itself
         return
