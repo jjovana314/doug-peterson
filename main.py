@@ -11,13 +11,9 @@ import aioredis
 token = config('TOKEN')
 channel_id = config('CHANNEL_ID')
 redis = aioredis.from_url(config('REDIS_URL'))
-inactive_threshold = 10
 max_days_old_message = 60
-period_days = 60
 app = Flask(__name__)
 
-run_at = datetime.now() + timedelta(days=30)
-delay = (run_at - datetime.now()).total_seconds()
 utc_now_with_tz = pytz.utc.localize(datetime.utcnow())
 date_limit_for_lurkers = utc_now_with_tz - timedelta(days=max_days_old_message)
 
@@ -30,19 +26,16 @@ intents.moderation = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-async def check_messages_per_channel(channel_history, users_group) -> list:
-    bots, non_lurkers, escape_lurker, new_users_role, introduce_role = users_group
-    result = []
-    if len(non_lurkers) > 0:
-        for user in non_lurkers:
-            sent_any_messages = []
-            if user not in bots and user not in escape_lurker and user not in new_users_role and user not in introduce_role and user.joined_at < date_limit_for_lurkers:
-                async for message in channel_history:
-                    if message.author.id == user.id:
-                        sent_any_messages.append(True)
-                        if (utc_now_with_tz - message.created_at) >= timedelta(days=max_days_old_message):
-                            sent_any_messages.append(False)
-                result.append((user.id, all(sent_any_messages)))
+async def check_messages_per_channel(channel_history, non_lurkers) -> list:
+    result = list()
+    for user in non_lurkers:
+        sent_any_messages = []
+        async for message in channel_history:
+            if message.author.id == user.id:
+                sent_any_messages.append(True)
+                if (utc_now_with_tz - message.created_at) >= timedelta(days=max_days_old_message):
+                    sent_any_messages.append(False)
+            result.append({"user_id": user.id, "channel_id": message.channel.id, "sent_messages": all(sent_any_messages)})
     return result
 
 
@@ -62,7 +55,6 @@ async def generate_users_group(ctx):
     return bots, non_lurkers, escape_lurker, new_users_role, introduce_role
 
 
-# @tasks.loop(hours=24 * 5)  # ! doesn't work
 @bot.event
 async def on_ready():
     """ Connecting bot to discord server """
@@ -84,29 +76,33 @@ async def get_response_from_redis(content: str):
         await redis.close()
 
 
+def get_non_lurkers(users_group) -> list:
+    result = list()
+    bots, non_lurkers, escape_lurker, new_users_role, introduce_role = users_group
+    for user in non_lurkers:
+        if user not in bots and user not in escape_lurker and user not in new_users_role and user not in introduce_role and user.joined_at < date_limit_for_lurkers:
+            result.append(user)
+    return result
+
+
 async def check_lurker(message):
-    if message.content.startswith('!check_lurker'):
-        user_id = message.author.id  # ID of the user who sent the command
-        server_data = []  # List to hold server data
+    server_data = []  # List to hold server data
+    for channel in bot.get_all_channels():
+        print(f"Checking channel {channel.id} name: {channel.name}")
+        if channel.type == ChannelType.text:
+            ctx = await bot.get_context(message)  # Get context from the fetched message
+            users_group = await generate_users_group(ctx)
+            non_lurkers = get_non_lurkers(users_group)
+            # channel_messages = [message async for message in ]
+            users_data = await check_messages_per_channel(channel.history(limit=500), non_lurkers)
+            for user_data_per_channel in users_data:
+                if user_data_per_channel["channel_id"] not in users_data:
+                    server_data.append(user_data_per_channel["channel_id"])
 
-        for channel in bot.get_all_channels():
-            print(f"Checking channel {channel.id} name: {channel.name}")
-            if channel.type == ChannelType.text:
-                ctx = await bot.get_context(message)  # Get context from the fetched message
-                users_group = await generate_users_group(ctx)
-                users_data = await check_messages_per_channel(channel.history(limit=50), users_group)
-                for user_data_per_channel in users_data:
-                    user_data = {'user_id': user_data_per_channel[0], 'sent_messages_in_channel': user_data_per_channel[1]}
-                    server_data.append(user_data)
-
-        for data in server_data:
+    for data in server_data:
+        if not data['sent_messages']:
             user = bot.get_user(data['user_id'])
-            if not all(data['sent_messages_in_channel']):
-                # Add lurker role to user
-                # await user.add_roles(utils.get(ctx.guild.roles, id=lurker_role_id))
-                print(f"Added lurker role to user {user.name} id: {user.id}")
-            else:
-                print(f"User {user.id} name: {user.name} is not lurker material.")
+            print(f"Added lurker role to user {user.name} id: {user.id}")
 
 
 @bot.event
@@ -114,11 +110,8 @@ async def on_message(message):
     if message.content.startswith('!check_lurker'):
         await message.reply('Checking...')
         await check_lurker(message)
-    """ Triggered on message """
-    if message.author == bot.user:  # ignore messages from the bot itself
-        return
 
-    if bot.user.mentioned_in(message):
+    if bot.user.mentioned_in(message) and not message.content.startswith('!check_lurker'):
         content = message.content.lower()
         response = await get_response_from_redis(content)
 
@@ -126,9 +119,6 @@ async def on_message(message):
             await message.reply(response)
         else:
             await message.reply("Yes, yes, very good, thank you.")
-        await bot.process_commands(message)
-
-    await bot.process_commands(message)
 
 
 @app.route('/')
