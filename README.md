@@ -58,7 +58,9 @@ Doug Peterson is a Discord bot designed to monitor users' activity on a server a
 
 ## Usage
 
-Once Doug Peterson is running on your Discord server, it will automatically monitor users' activity and assign roles accordingly. Users will also receive responses to their messages with quotes from the TV show 'What We Do in the Shadows'.
+Add Doug Peterson to your discord server and assign admin role to bot (bot needs to have full access). After that, use
+command ```!check_lurker``` and bot will automatically check all users in order to find lurkers. If bot finds inactive
+users - he'll assign them lurker role.
 
 ## Contributing
 
